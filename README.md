@@ -1,3 +1,8 @@
+s25g5d4: added shuffle autoplay. add `autoplayShuffle: true`
+to the Splide option to enable shuffle autoplay.
+
+<hr></hr>
+
 <div align="center">
 <a href="https://splidejs.com">
   <img alt="Splide" src="./images/logo.svg" width="70">
@@ -72,7 +77,7 @@ No dependencies, no Lighthouse errors.
 
 ## Support Splide
 
-Please support the project if you like it! 
+Please support the project if you like it!
 - [GitHub Sponsors](https://github.com/sponsors/NaotoshiFujita)
 
 ## Features
