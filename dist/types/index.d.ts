@@ -149,6 +149,7 @@ interface AutoplayComponent extends BaseComponent {
     play(): void;
     pause(): void;
     isPaused(): boolean;
+    shuffle(on: boolean): void;
 }
 
 /**
@@ -321,6 +322,7 @@ interface Options extends ResponsiveOptions {
      * You need to provided play/pause buttons or manually start it by `Autoplay#play()`.
      */
     autoplay?: boolean | 'pause';
+    autoplayShuffle?: boolean;
     /**
      * The autoplay interval in milliseconds.
      */

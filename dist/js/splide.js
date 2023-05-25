@@ -1890,13 +1890,14 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
         bind = _EventInterface6.bind,
         emit = _EventInterface6.emit;
 
-    var interval = RequestInterval(options.interval, Splide2.go.bind(Splide2, ">"), onAnimationFrame);
+    var interval = RequestInterval(options.interval, onInterval, onAnimationFrame);
     var isPaused = interval.isPaused;
     var Elements = Components2.Elements,
         _Components2$Elements4 = Components2.Elements,
         root = _Components2$Elements4.root,
         toggle = _Components2$Elements4.toggle;
     var autoplay = options.autoplay;
+    var shuffleBuffer = options.autoplayShuffle ? [] : null;
     var hovered;
     var focused;
     var stopped = autoplay === "pause";
@@ -1982,12 +1983,79 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
       interval.set(Slide && +getAttribute(Slide.slide, INTERVAL_DATA_ATTRIBUTE) || options.interval);
     }
 
+    function range(end) {
+      return Array(end).fill(void 0).map(function (_, i) {
+        return i;
+      });
+    }
+
+    function shuffleArray(arr) {
+      arr = [].concat(arr);
+
+      for (var index = arr.length - 1; index > 0; index--) {
+        var newIndex = Math.floor(Math.random() * (index + 1));
+        var _ref2 = [arr[newIndex], arr[index]];
+        arr[index] = _ref2[0];
+        arr[newIndex] = _ref2[1];
+      }
+
+      return arr;
+    }
+
+    function initShuffle() {
+      return shuffleArray(range(Components2.Slides.getLength()));
+    }
+
+    function shuffle(on2) {
+      if (on2 && isNull(shuffleBuffer)) {
+        shuffleBuffer = initShuffle();
+      }
+
+      if (!on2 && !isNull(shuffleBuffer)) {
+        shuffleBuffer = null;
+      }
+    }
+
+    function onInterval() {
+      if (isNull(shuffleBuffer)) {
+        Splide2.go(">");
+        return;
+      }
+
+      var slideLen = Components2.Slides.getLength();
+
+      if (slideLen <= 2) {
+        Splide2.go(">");
+        return;
+      }
+
+      var nextIndex;
+
+      do {
+        nextIndex = shuffleBuffer.shift();
+
+        if (isUndefined(nextIndex) || isNull(nextIndex) || nextIndex >= slideLen) {
+          shuffleBuffer = initShuffle();
+          nextIndex = shuffleBuffer.shift();
+        }
+
+        if (shuffleBuffer.length < slideLen) {
+          var _shuffleBuffer;
+
+          (_shuffleBuffer = shuffleBuffer).push.apply(_shuffleBuffer, initShuffle());
+        }
+      } while (nextIndex === Components2.Controller.getIndex());
+
+      Splide2.go(nextIndex);
+    }
+
     return {
       mount: mount,
       destroy: interval.cancel,
       play: play,
       pause: pause,
-      isPaused: isPaused
+      isPaused: isPaused,
+      shuffle: shuffle
     };
   }
 

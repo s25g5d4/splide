@@ -1897,13 +1897,14 @@ function Autoplay(Splide2, Components2, options) {
       bind = _EventInterface6.bind,
       emit = _EventInterface6.emit;
 
-  var interval = RequestInterval(options.interval, Splide2.go.bind(Splide2, ">"), onAnimationFrame);
+  var interval = RequestInterval(options.interval, onInterval, onAnimationFrame);
   var isPaused = interval.isPaused;
   var Elements = Components2.Elements,
       _Components2$Elements4 = Components2.Elements,
       root = _Components2$Elements4.root,
       toggle = _Components2$Elements4.toggle;
   var autoplay = options.autoplay;
+  var shuffleBuffer = options.autoplayShuffle ? [] : null;
   var hovered;
   var focused;
   var stopped = autoplay === "pause";
@@ -1989,12 +1990,79 @@ function Autoplay(Splide2, Components2, options) {
     interval.set(Slide && +getAttribute(Slide.slide, INTERVAL_DATA_ATTRIBUTE) || options.interval);
   }
 
+  function range(end) {
+    return Array(end).fill(void 0).map(function (_, i) {
+      return i;
+    });
+  }
+
+  function shuffleArray(arr) {
+    arr = [].concat(arr);
+
+    for (var index = arr.length - 1; index > 0; index--) {
+      var newIndex = Math.floor(Math.random() * (index + 1));
+      var _ref2 = [arr[newIndex], arr[index]];
+      arr[index] = _ref2[0];
+      arr[newIndex] = _ref2[1];
+    }
+
+    return arr;
+  }
+
+  function initShuffle() {
+    return shuffleArray(range(Components2.Slides.getLength()));
+  }
+
+  function shuffle(on2) {
+    if (on2 && isNull(shuffleBuffer)) {
+      shuffleBuffer = initShuffle();
+    }
+
+    if (!on2 && !isNull(shuffleBuffer)) {
+      shuffleBuffer = null;
+    }
+  }
+
+  function onInterval() {
+    if (isNull(shuffleBuffer)) {
+      Splide2.go(">");
+      return;
+    }
+
+    var slideLen = Components2.Slides.getLength();
+
+    if (slideLen <= 2) {
+      Splide2.go(">");
+      return;
+    }
+
+    var nextIndex;
+
+    do {
+      nextIndex = shuffleBuffer.shift();
+
+      if (isUndefined(nextIndex) || isNull(nextIndex) || nextIndex >= slideLen) {
+        shuffleBuffer = initShuffle();
+        nextIndex = shuffleBuffer.shift();
+      }
+
+      if (shuffleBuffer.length < slideLen) {
+        var _shuffleBuffer;
+
+        (_shuffleBuffer = shuffleBuffer).push.apply(_shuffleBuffer, initShuffle());
+      }
+    } while (nextIndex === Components2.Controller.getIndex());
+
+    Splide2.go(nextIndex);
+  }
+
   return {
     mount: mount,
     destroy: interval.cancel,
     play: play,
     pause: pause,
-    isPaused: isPaused
+    isPaused: isPaused,
+    shuffle: shuffle
   };
 }
 
@@ -3287,9 +3355,9 @@ var SplideRenderer = /*#__PURE__*/function () {
   _proto3.registerRootStyles = function registerRootStyles() {
     var _this5 = this;
 
-    this.breakpoints.forEach(function (_ref2) {
-      var width = _ref2[0],
-          options = _ref2[1];
+    this.breakpoints.forEach(function (_ref3) {
+      var width = _ref3[0],
+          options = _ref3[1];
 
       _this5.Style.rule(" ", "max-width", unit(options.width), width);
     });
@@ -3300,9 +3368,9 @@ var SplideRenderer = /*#__PURE__*/function () {
 
     var Style2 = this.Style;
     var selector = "." + CLASS_TRACK;
-    this.breakpoints.forEach(function (_ref3) {
-      var width = _ref3[0],
-          options = _ref3[1];
+    this.breakpoints.forEach(function (_ref4) {
+      var width = _ref4[0],
+          options = _ref4[1];
       Style2.rule(selector, _this6.resolve("paddingLeft"), _this6.cssPadding(options, false), width);
       Style2.rule(selector, _this6.resolve("paddingRight"), _this6.cssPadding(options, true), width);
       Style2.rule(selector, "height", _this6.cssTrackHeight(options), width);
@@ -3314,9 +3382,9 @@ var SplideRenderer = /*#__PURE__*/function () {
 
     var Style2 = this.Style;
     var selector = "." + CLASS_LIST;
-    this.breakpoints.forEach(function (_ref4) {
-      var width = _ref4[0],
-          options = _ref4[1];
+    this.breakpoints.forEach(function (_ref5) {
+      var width = _ref5[0],
+          options = _ref5[1];
       Style2.rule(selector, "transform", _this7.buildTranslate(options), width);
 
       if (!_this7.cssSlideHeight(options)) {
@@ -3330,9 +3398,9 @@ var SplideRenderer = /*#__PURE__*/function () {
 
     var Style2 = this.Style;
     var selector = "." + CLASS_SLIDE;
-    this.breakpoints.forEach(function (_ref5) {
-      var width = _ref5[0],
-          options = _ref5[1];
+    this.breakpoints.forEach(function (_ref6) {
+      var width = _ref6[0],
+          options = _ref6[1];
       Style2.rule(selector, "width", _this8.cssSlideWidth(options), width);
       Style2.rule(selector, "height", _this8.cssSlideHeight(options) || "100%", width);
       Style2.rule(selector, _this8.resolve("marginRight"), unit(options.gap) || "0px", width);
@@ -3603,8 +3671,8 @@ var SplideRenderer = /*#__PURE__*/function () {
         return options.clones;
       }
 
-      var perPage = max.apply(void 0, this.breakpoints.map(function (_ref6) {
-        var options2 = _ref6[1];
+      var perPage = max.apply(void 0, this.breakpoints.map(function (_ref7) {
+        var options2 = _ref7[1];
         return options2.perPage;
       }));
       return perPage * ((options.flickMaxPages || 1) + 1);

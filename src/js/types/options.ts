@@ -56,6 +56,8 @@ export interface Options extends ResponsiveOptions {
    */
   autoplay?: boolean | 'pause';
 
+  autoplayShuffle?: boolean;
+
   /**
    * The autoplay interval in milliseconds.
    */

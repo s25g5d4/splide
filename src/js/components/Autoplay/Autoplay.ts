@@ -11,7 +11,7 @@ import {
 import { EventInterface, RequestInterval } from '../../constructors';
 import { Splide } from '../../core/Splide/Splide';
 import { BaseComponent, Components, Options } from '../../types';
-import { getAttribute, setAttribute, style, toggleClass } from '../../utils';
+import { getAttribute, isNull, isUndefined, setAttribute, style, toggleClass } from '../../utils';
 import { INTERVAL_DATA_ATTRIBUTE } from './constants';
 
 
@@ -24,6 +24,7 @@ export interface AutoplayComponent extends BaseComponent {
   play(): void;
   pause(): void;
   isPaused(): boolean;
+  shuffle( on: boolean ): void;
 }
 
 /**
@@ -39,10 +40,11 @@ export interface AutoplayComponent extends BaseComponent {
  */
 export function Autoplay( Splide: Splide, Components: Components, options: Options ): AutoplayComponent {
   const { on, bind, emit } = EventInterface( Splide );
-  const interval = RequestInterval( options.interval, Splide.go.bind( Splide, '>' ), onAnimationFrame );
+  const interval = RequestInterval( options.interval, onInterval, onAnimationFrame );
   const { isPaused } = interval;
   const { Elements, Elements: { root, toggle } } = Components;
   const { autoplay } = options;
+  let shuffleBuffer: number[] = options.autoplayShuffle ? [] : null;
 
   /**
    * Indicates whether the slider is hovered or not.
@@ -168,11 +170,65 @@ export function Autoplay( Splide: Splide, Components: Components, options: Optio
     interval.set( Slide && +getAttribute( Slide.slide, INTERVAL_DATA_ATTRIBUTE ) || options.interval );
   }
 
+  function range( end: number ): number[] {
+    return Array( end ).fill( undefined ).map( ( _, i ) => i );
+  }
+
+  function shuffleArray<T>( arr: T[] ): T[] {
+    arr = [ ...arr ];
+    for ( let index = arr.length - 1; index > 0; index-- ) {
+      const newIndex = Math.floor( Math.random() * ( index + 1 ) );
+      [ arr[ index ], arr[ newIndex ] ] = [ arr[ newIndex ], arr[ index ] ];
+    }
+    return arr;
+  }
+
+  function initShuffle(): number[] {
+    return shuffleArray( range( Components.Slides.getLength() ) );
+  }
+
+  function shuffle( on: boolean ): void {
+    if ( on && isNull( shuffleBuffer ) ) {
+      shuffleBuffer = initShuffle();
+    }
+    if ( !on && !isNull( shuffleBuffer ) ) {
+      shuffleBuffer = null;
+    }
+  }
+
+  function onInterval() {
+    if ( isNull( shuffleBuffer ) ) {
+      Splide.go( '>' );
+      return;
+    }
+
+    const slideLen = Components.Slides.getLength();
+    if ( slideLen <= 2 ) {
+      Splide.go( '>' );
+      return;
+    }
+
+    let nextIndex: number;
+    do {
+      nextIndex = shuffleBuffer.shift();
+      if ( isUndefined( nextIndex ) || isNull( nextIndex ) || nextIndex >= slideLen ) {
+        shuffleBuffer = initShuffle();
+        nextIndex = shuffleBuffer.shift();
+      }
+      if ( shuffleBuffer.length < slideLen ) {
+        shuffleBuffer.push( ...initShuffle() );
+      }
+    } while ( nextIndex === Components.Controller.getIndex() );
+
+    Splide.go( nextIndex );
+  }
+
   return {
     mount,
     destroy: interval.cancel,
     play,
     pause,
     isPaused,
+    shuffle,
   };
 }
